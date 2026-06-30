@@ -1,4 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ClickDemo
+
+Turn static product screenshots into interactive, clickable demos you can share with a single link.
+
+## Setup
+
+### 1. Supabase project
+
+1. Create a project at [supabase.com](https://supabase.com).
+2. In the SQL editor, run `supabase/schema.sql` (idempotent — safe to re-run).
+3. Go to **Storage → Buckets** and create a bucket named `screenshots` with **Public** access enabled.
+
+### 2. Environment variables
+
+Copy `.env.example` to `.env.local` and fill in:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
+
+### 3. Run
+
+```bash
+npm install
+npm run dev
+# open http://localhost:3000
+```
+
+## Vercel deploy
+
+1. Import the repo in Vercel.
+2. Set the three env vars in Vercel project settings.
+3. Set `NEXT_PUBLIC_BASE_URL` to your production URL.
+4. No Supabase redirect/callback config needed (no auth).
+
+## ⚠️ Security note
+
+**The builder has no access control by default.** Anyone who reaches the deployed builder URL can create and edit demos. Deploy behind a host-level password or IP allowlist, or set `BUILDER_ACCESS_TOKEN=your-secret` in env vars to enable a shared-secret gate (`?token=your-secret` in the URL, stored in an httpOnly cookie). This is a convenience gate, not real auth.
+
+## Coordinate system
+
+Hotspot positions are stored as fractions (0–1) of the image's intrinsic dimensions. `x, y, w, h` map to `leftEdge/width, topEdge/height, hotspotWidth/imageWidth, hotspotHeight/imageHeight`. In the browser the image fills its container with `width:100%; height:auto` and hotspots use `left:x*100%` etc., so they scale perfectly with any viewport width. The same logic runs in builder and viewer via `lib/coords.ts` — zero drift by construction.
+
+## Viewer accessibility note
+
+Viewer hotspots are not keyboard-navigable in v1 (mouse only). Known limitation for a future version.
+
+---
 
 ## Getting Started
 
