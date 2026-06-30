@@ -885,16 +885,19 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
 ) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(screen.name);
+  const [dragOver, setDragOver] = useState(false);
   const imgUrl = getPublicUrl(screen.image_path);
 
   return (
     <li
       draggable
-      onDragStart={onDragStart}
-      onDragOver={e => e.preventDefault()}
-      onDrop={onDrop}
+      onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
+      onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={() => { setDragOver(false); onDrop(); }}
+      onDragEnd={() => setDragOver(false)}
       onClick={onSelect}
-      className={`rounded border cursor-pointer transition-colors p-1 ${isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+      className={`rounded border cursor-grab active:cursor-grabbing transition-colors p-1 ${dragOver ? 'border-blue-400 bg-blue-50 scale-[1.02]' : isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
     >
       {isFirst && <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide px-0.5">Start</span>}
       {/* eslint-disable-next-line @next/next/no-img-element */}
