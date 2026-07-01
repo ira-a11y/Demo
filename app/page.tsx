@@ -92,14 +92,15 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
+    <main className="min-h-screen p-8" style={{ background: '#EEEEEE' }}>
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-semibold text-gray-900">ClickDemo</h1>
           <button
             onClick={createDemo}
             disabled={creating}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 rounded-lg font-medium text-gray-900 disabled:opacity-50 focus:outline-none focus:ring-2 transition-opacity"
+            style={{ background: '#F7F859' }}
           >
             {creating ? 'Creating…' : '+ New demo'}
           </button>
@@ -108,10 +109,10 @@ export default function Dashboard() {
         {loading && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1,2,3,4].map(i => (
-              <div key={i} className="rounded-xl overflow-hidden border border-gray-200 bg-white animate-pulse">
-                <div className="aspect-video bg-gray-200" />
+              <div key={i} className="rounded-xl overflow-hidden border border-gray-200 animate-pulse" style={{ background: '#FAFAFA' }}>
+                <div className="aspect-video" style={{ background: '#E5E5E5' }} />
                 <div className="p-3">
-                  <div className="h-4 bg-gray-200 rounded w-2/3" />
+                  <div className="h-4 rounded w-2/3" style={{ background: '#E5E5E5' }} />
                 </div>
               </div>
             ))}
@@ -132,7 +133,8 @@ export default function Dashboard() {
             <button
               onClick={createDemo}
               disabled={creating}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-6 py-3 rounded-lg font-medium text-gray-900 disabled:opacity-50 focus:outline-none focus:ring-2 transition-opacity"
+              style={{ background: '#F7F859' }}
             >
               Create your first demo
             </button>
@@ -144,11 +146,14 @@ export default function Dashboard() {
             {demos.map(demo => (
               <div
                 key={demo.id}
-                className="group rounded-xl overflow-hidden border border-gray-200 bg-white hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                className="group rounded-xl overflow-hidden border border-transparent hover:shadow-md transition-all cursor-pointer"
+                style={{ background: '#FAFAFA', borderColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = '#B6D4D6')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}
                 onClick={() => router.push(`/build/${demo.id}`)}
               >
                 {/* Thumbnail */}
-                <div className="aspect-video bg-gray-100 overflow-hidden relative">
+                <div className="aspect-video overflow-hidden relative" style={{ background: '#E8E8E8' }}>
                   {demo.firstImagePath ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -182,7 +187,8 @@ export default function Dashboard() {
                         if (e.key === 'Escape') setEditingId(null);
                       }}
                       onClick={e => e.stopPropagation()}
-                      className="w-full border-b border-blue-400 outline-none text-gray-900 font-medium text-sm py-0.5 bg-transparent"
+                      className="w-full outline-none text-gray-900 font-medium text-sm py-0.5 bg-transparent border-b"
+                      style={{ borderColor: '#B6D4D6' }}
                       maxLength={120}
                     />
                   ) : (

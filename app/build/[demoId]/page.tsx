@@ -601,10 +601,10 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
   const shareUrl = `${baseUrl}/demo/${slug}`;
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#EEEEEE' }}>
       {/* Toolbar */}
-      <header className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-4 shrink-0">
-        <button onClick={() => router.push('/')} className="text-gray-500 hover:text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 rounded" aria-label="Back to dashboard">
+      <header className="border-b px-4 py-2 flex items-center gap-4 shrink-0" style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}>
+        <button onClick={() => router.push('/')} className="text-gray-500 hover:text-gray-800 text-sm focus:outline-none rounded" aria-label="Back to dashboard">
           ← Dashboard
         </button>
         {editingTitle ? (
@@ -614,22 +614,23 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
             onChange={e => setTitleEdit(e.target.value)}
             onBlur={() => saveTitle(titleEdit)}
             onKeyDown={e => { if (e.key === 'Enter') saveTitle(titleEdit); if (e.key === 'Escape') { setTitleEdit(demo?.title ?? ''); setEditingTitle(false); } }}
-            className="border-b border-blue-400 outline-none font-semibold text-gray-900 bg-transparent w-48"
+            className="outline-none font-semibold text-gray-900 bg-transparent w-48 border-b"
+            style={{ borderColor: '#B6D4D6' }}
             maxLength={120}
           />
         ) : (
-          <span className="font-semibold text-gray-900 cursor-pointer hover:text-blue-600" onClick={() => setEditingTitle(true)}>{demo?.title ?? ''}</span>
+          <span className="font-semibold text-gray-900 cursor-pointer hover:opacity-70" onClick={() => setEditingTitle(true)}>{demo?.title ?? ''}</span>
         )}
         <div className="flex-1" />
         {/* Mode toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+        <div className="flex rounded-lg p-0.5 gap-0.5" style={{ background: '#E4E4E4' }}>
           <button
             onClick={() => setMode('pointer')}
             title="Pointer — select & move hotspots"
-            className={`px-3 py-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400
-              ${mode === 'pointer' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
+            className={`px-3 py-1.5 rounded transition-colors focus:outline-none
+              ${mode === 'pointer' ? 'shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
+            style={mode === 'pointer' ? { background: '#FAFAFA' } : {}}
           >
-            {/* Cursor arrow icon */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M3 1L13 8.5L8.2 9.6L6 14L3 1Z" fill="currentColor"/>
             </svg>
@@ -637,10 +638,10 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
           <button
             onClick={() => setMode('add')}
             title="Add hotspot — draw a new region"
-            className={`px-3 py-1.5 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400
-              ${mode === 'add' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
+            className={`px-3 py-1.5 rounded transition-colors focus:outline-none
+              ${mode === 'add' ? 'shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
+            style={mode === 'add' ? { background: '#FAFAFA' } : {}}
           >
-            {/* Radar/target circle icon */}
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
               <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/>
@@ -654,26 +655,27 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
         </div>
         <div className="flex-1" />
         {/* Zoom controls */}
-        <div className="flex items-center gap-1 border border-gray-200 rounded-lg px-1">
-          <button onClick={zoomOut} disabled={zoom <= ZOOM_STEPS[0]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none focus:ring-1 focus:ring-blue-400" aria-label="Zoom out">−</button>
+        <div className="flex items-center gap-1 rounded-lg px-1 border" style={{ borderColor: '#D8D8D8' }}>
+          <button onClick={zoomOut} disabled={zoom <= ZOOM_STEPS[0]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom out">−</button>
           <span className="text-xs text-gray-600 w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-          <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none focus:ring-1 focus:ring-blue-400" aria-label="Zoom in">+</button>
+          <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom in">+</button>
         </div>
 
-        <div className="w-px h-5 bg-gray-200" />
+        <div className="w-px h-5" style={{ background: '#D8D8D8' }} />
         <span className={`text-xs ${saveStatus === 'error' ? 'text-red-500' : 'text-gray-400'}`}>
           {saveStatus === 'saved' ? 'All changes saved' : saveStatus === 'saving' ? 'Saving…' : 'Couldn\'t save — retry'}
         </span>
-        <button onClick={() => setShowShare(true)} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">Share</button>
+        <button onClick={() => setShowShare(true)} className="px-3 py-1.5 rounded text-sm font-medium text-gray-900 focus:outline-none" style={{ background: '#F7F859' }}>Share</button>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Screen Rail */}
-        <aside className="w-52 bg-white border-r border-gray-200 flex flex-col overflow-y-auto shrink-0">
-          <div className="p-2 border-b border-gray-100">
+        <aside className="w-52 border-r flex flex-col overflow-y-auto shrink-0" style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}>
+          <div className="p-2 border-b" style={{ borderColor: '#EEEEEE' }}>
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full py-1.5 border border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-blue-400 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full py-1.5 border border-dashed rounded text-sm text-gray-500 hover:text-gray-800 focus:outline-none transition-colors"
+              style={{ borderColor: '#B6D4D6' }}
             >
               + Upload
             </button>
@@ -689,7 +691,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
           </div>
           <ul className="flex-1 p-1 space-y-1">
             {uploadTiles.map(t => (
-              <li key={t.tempId} className="border rounded p-1 text-xs text-gray-500 bg-gray-50">
+              <li key={t.tempId} className="border rounded p-1 text-xs text-gray-500" style={{ background: '#F3F3F3', borderColor: '#D8D8D8' }}>
                 {t.status === 'uploading' ? (
                   <div className="flex items-center gap-1"><span className="animate-spin">⟳</span> {t.file.name.slice(0, 20)}</div>
                 ) : (
@@ -739,7 +741,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
           {!activeScreen ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-gray-400">
               <p>Upload a screenshot to start building your demo.</p>
-              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Upload image</button>
+              <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 rounded text-gray-900 font-medium" style={{ background: '#F7F859' }}>Upload image</button>
             </div>
           ) : (
             <div className="p-6">
@@ -857,7 +859,8 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
           <button
             onClick={() => setDrawerOpen(true)}
             title="Open inspector"
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-white border border-gray-200 border-r-0 rounded-l-lg px-1.5 py-3 shadow text-gray-400 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 z-10"
+            className="absolute right-0 top-1/2 -translate-y-1/2 border border-r-0 rounded-l-lg px-1.5 py-3 shadow text-gray-400 hover:text-gray-700 focus:outline-none z-10"
+            style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}
             style={{ writingMode: 'vertical-rl' }}
           >
             Inspector
@@ -897,9 +900,14 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
       onDrop={() => { setDragOver(false); onDrop(); }}
       onDragEnd={() => setDragOver(false)}
       onClick={onSelect}
-      className={`rounded border cursor-grab active:cursor-grabbing transition-colors p-1 ${dragOver ? 'border-blue-400 bg-blue-50 scale-[1.02]' : isActive ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+      className="rounded border cursor-grab active:cursor-grabbing transition-all p-1"
+      style={{
+        borderColor: dragOver ? '#B6D4D6' : isActive ? '#B6D4D6' : '#E0E0E0',
+        background: dragOver ? 'rgba(182,212,214,0.18)' : isActive ? 'rgba(182,212,214,0.15)' : '#FAFAFA',
+        transform: dragOver ? 'scale(1.02)' : undefined,
+      }}
     >
-      {isFirst && <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-wide px-0.5">Start</span>}
+      {isFirst && <span className="text-[10px] font-semibold uppercase tracking-wide px-0.5" style={{ color: '#6aabae' }}>Start</span>}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={imgUrl} alt={screen.name} className="w-full h-20 object-cover rounded" loading="lazy" />
       {editing ? (
@@ -913,7 +921,8 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
             if (e.key === 'Escape') { setVal(screen.name); setEditing(false); }
           }}
           onClick={e => e.stopPropagation()}
-          className="w-full text-xs text-gray-900 border-b border-blue-400 outline-none mt-3 bg-transparent"
+          className="w-full text-xs text-gray-900 outline-none mt-3 bg-transparent border-b"
+          style={{ borderColor: '#B6D4D6' }}
           maxLength={80}
         />
       ) : (
@@ -922,7 +931,8 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
       <div className="flex gap-2 mt-1">
         <button
           onClick={e => { e.stopPropagation(); onReplace(); }}
-          className="text-[10px] text-blue-500 hover:text-blue-700 focus:outline-none"
+          className="text-[10px] focus:outline-none hover:opacity-70"
+          style={{ color: '#5fa0a3' }}
           aria-label="Replace image"
         >Replace</button>
         <button
@@ -1037,11 +1047,11 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
   }
 
   return (
-    <aside className="w-64 bg-white border-l border-gray-200 flex flex-col shrink-0">
+    <aside className="w-64 border-l flex flex-col shrink-0" style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: '#EEEEEE' }}>
         <h3 className="font-medium text-gray-800 text-sm">Inspector</h3>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none focus:outline-none focus:ring-1 focus:ring-gray-300 rounded" aria-label="Close inspector">×</button>
+        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none focus:outline-none rounded" aria-label="Close inspector">×</button>
       </div>
 
       {selectedHotspots.length === 0 ? (
@@ -1057,13 +1067,13 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           {/* Action at top */}
           <div>
             <label className="text-xs text-gray-500 font-medium mb-1.5 block">Action on click</label>
-            <div className="flex bg-gray-100 rounded-lg p-0.5 gap-0.5">
+            <div className="flex rounded-lg p-0.5 gap-0.5" style={{ background: '#E8E8E8' }}>
               {([['navigate','Go to screen'],['tooltip','Tooltip'],['layover','Layover']] as const).map(([a, label]) => (
                 <button
                   key={a}
                   onClick={() => onPatch({ action: a })}
-                  className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400
-                    ${hotspot.action === a ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                  className="flex-1 py-1.5 rounded-md text-xs font-medium transition-colors focus:outline-none"
+                  style={hotspot.action === a ? { background: '#F7F859', color: '#111' } : { color: '#888' }}
                 >
                   {label}
                 </button>
@@ -1114,7 +1124,8 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
                 <button
                   onClick={() => layoverInputRef.current?.click()}
                   disabled={layoverUploading}
-                  className="w-full border-2 border-dashed border-gray-300 rounded-lg py-4 text-xs text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+                  className="w-full border-2 border-dashed rounded-lg py-4 text-xs text-gray-400 hover:opacity-80 transition-colors focus:outline-none disabled:opacity-50"
+                  style={{ borderColor: '#B6D4D6' }}
                 >
                   {layoverUploading ? 'Uploading…' : '+ Upload image'}
                 </button>
@@ -1126,12 +1137,12 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
                     <button
                       key={String(full)}
                       onClick={() => onPatch({ layover_full_screen: full })}
-                      className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400
-                        ${hotspot.layover_full_screen === full ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}
+                      className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border transition-colors focus:outline-none"
+                      style={{ borderColor: hotspot.layover_full_screen === full ? '#B6D4D6' : '#E0E0E0', background: hotspot.layover_full_screen === full ? 'rgba(182,212,214,0.15)' : 'transparent', color: hotspot.layover_full_screen === full ? '#2d7a7e' : '#666' }}
                     >
-                      <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center
-                        ${hotspot.layover_full_screen === full ? 'border-blue-500' : 'border-gray-300'}`}>
-                        {hotspot.layover_full_screen === full && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 block" />}
+                      <span className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center"
+                        style={{ borderColor: hotspot.layover_full_screen === full ? '#B6D4D6' : '#ccc' }}>
+                        {hotspot.layover_full_screen === full && <span className="w-1.5 h-1.5 rounded-full block" style={{ background: '#B6D4D6' }} />}
                       </span>
                       {full ? 'Cover screen' : 'Keep original size'}
                     </button>
@@ -1142,7 +1153,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           )}
 
           {/* Divider */}
-          <div className="border-t border-gray-100" />
+          <div className="border-t" style={{ borderColor: '#EEEEEE' }} />
 
           {/* Optional tooltip */}
           <div>
@@ -1154,8 +1165,8 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
               }}
               className="flex items-center gap-2 w-full text-left group focus:outline-none"
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center text-[10px] flex-shrink-0 transition-colors
-                ${showTooltip ? 'bg-blue-500 border-blue-500 text-white' : 'border-gray-300 group-hover:border-gray-400'}`}>
+              <div className="w-4 h-4 rounded border flex items-center justify-center text-[10px] flex-shrink-0 transition-colors"
+                style={{ background: showTooltip ? '#B6D4D6' : 'transparent', borderColor: showTooltip ? '#B6D4D6' : '#ccc', color: '#fff' }}>
                 {showTooltip && '✓'}
               </div>
               <span className="text-xs font-medium text-gray-600 group-hover:text-gray-800">Add tooltip on hover</span>
@@ -1168,7 +1179,8 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
                   maxLength={280}
                   onChange={e => setTooltipVal(e.target.value)}
                   onBlur={() => onPatch({ tooltip_text: tooltipVal || null })}
-                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="w-full rounded-lg px-2 py-1.5 text-sm text-gray-900 resize-none h-20 focus:outline-none border"
+                  style={{ borderColor: '#D8D8D8', background: '#F5F5F5' }}
                   placeholder="Text shown when hovering…"
                 />
                 <p className="text-xs text-gray-400 text-right">{tooltipVal.length}/280</p>
@@ -1177,7 +1189,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           </div>
 
           {/* Corner radius */}
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t pt-4" style={{ borderColor: '#EEEEEE' }}>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs text-gray-500 font-medium">Corner radius</label>
               <button
@@ -1205,7 +1217,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
             </div>
 
             {radiusLinked ? (
-              <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center rounded-lg overflow-hidden border" style={{ borderColor: '#D8D8D8', background: '#F5F5F5' }}>
                 <input
                   type="number" min={0} max={999} step={1}
                   value={corners.tl}
@@ -1222,7 +1234,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {([['tl','↖'],['tr','↗'],['bl','↙'],['br','↘']] as [keyof typeof corners, string][]).map(([key, icon]) => (
-                  <div key={key} className="flex items-center gap-1 border border-gray-200 rounded-lg px-2 py-1.5">
+                  <div key={key} className="flex items-center gap-1 rounded-lg px-2 py-1.5 border" style={{ borderColor: '#D8D8D8', background: '#F5F5F5' }}>
                     <span className="text-xs text-gray-400 select-none">{icon}</span>
                     <input
                       type="number" min={0} max={999} step={1}
@@ -1241,10 +1253,10 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           </div>
 
           {/* Delete */}
-          <div className="mt-auto pt-2 border-t border-gray-100">
+          <div className="mt-auto pt-2 border-t" style={{ borderColor: '#EEEEEE' }}>
             <button
               onClick={onDelete}
-              className="text-sm text-red-500 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
+              className="text-sm text-red-400 hover:text-red-600 focus:outline-none rounded"
             >
               Delete hotspot
             </button>
@@ -1320,10 +1332,10 @@ function MultiSelectPanel({ hotspots, onPatchMany, onDeleteMany }:
         <p className="text-[10px] text-gray-400 mt-1.5">Sets the same size on all selected hotspots</p>
       </div>
 
-      <div className="mt-auto pt-2 border-t border-gray-100">
+      <div className="mt-auto pt-2 border-t" style={{ borderColor: '#EEEEEE' }}>
         <button
           onClick={onDeleteMany}
-          className="text-sm text-red-500 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
+          className="text-sm text-red-400 hover:text-red-600 focus:outline-none rounded"
         >
           Delete {hotspots.length} hotspots
         </button>
@@ -1337,14 +1349,15 @@ function ShareModal({ url, onClose }: { url: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="rounded-xl p-6 w-full max-w-md shadow-xl" style={{ background: '#FAFAFA' }} onClick={e => e.stopPropagation()}>
         <h2 className="font-semibold text-gray-900 mb-1">Share demo</h2>
         <p className="text-xs text-gray-400 mb-4">Anyone with this link can view the demo. No sign-in required.</p>
         <div className="flex gap-2">
-          <input readOnly value={url} className="flex-1 border border-gray-200 rounded px-3 py-2 text-sm text-gray-700 bg-gray-50 focus:outline-none" />
+          <input readOnly value={url} className="flex-1 rounded px-3 py-2 text-sm text-gray-700 focus:outline-none border" style={{ background: '#EEEEEE', borderColor: '#D8D8D8' }} />
           <button
             onClick={() => { navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-            className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-3 py-2 rounded text-sm font-medium text-gray-900 focus:outline-none"
+            style={{ background: '#F7F859' }}
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
@@ -1352,7 +1365,8 @@ function ShareModal({ url, onClose }: { url: string; onClose: () => void }) {
         <div className="flex items-center justify-between mt-4">
           <button
             onClick={() => window.open(url, '_blank')}
-            className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 rounded text-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="flex items-center gap-1.5 px-3 py-2 rounded text-sm text-gray-700 hover:opacity-80 focus:outline-none border"
+            style={{ borderColor: '#D8D8D8', background: '#EEEEEE' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Review
