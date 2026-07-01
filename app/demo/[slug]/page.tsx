@@ -71,22 +71,51 @@ export default function ViewerPage({ params }: { params: Promise<{ slug: string 
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col" onClick={() => setTooltip(null)}>
       {/* Chrome */}
-      <div className="flex items-center justify-between px-6 py-3 bg-gray-800 border-b border-gray-700 shrink-0">
-        <span className="text-white font-medium text-sm truncate max-w-xs">{bundle.demo.title}</span>
-        <div className="flex gap-2">
-          <button
-            onClick={goBack}
-            disabled={history.length === 0}
-            className="px-3 py-1.5 text-sm text-gray-300 border border-gray-600 rounded hover:bg-gray-700 disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            ← Back
-          </button>
-          <button
-            onClick={restart}
-            className="px-3 py-1.5 text-sm text-gray-300 border border-gray-600 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            ↺ Restart
-          </button>
+      <div className="bg-gray-800 border-b border-gray-700 shrink-0">
+        {/* Top row: title + controls */}
+        <div className="flex items-center justify-between px-6 py-3">
+          <span className="text-white font-medium text-sm truncate max-w-xs">{bundle.demo.title}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={goBack}
+              disabled={history.length === 0}
+              className="px-3 py-1.5 text-sm text-gray-300 border border-gray-600 rounded hover:bg-gray-700 disabled:opacity-40 focus:outline-none"
+            >
+              ← Back
+            </button>
+            <button
+              onClick={restart}
+              className="px-3 py-1.5 text-sm text-gray-300 border border-gray-600 rounded hover:bg-gray-700 focus:outline-none"
+            >
+              ↺ Restart
+            </button>
+          </div>
+        </div>
+        {/* Thumbnail slider */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#4b5563 transparent' }}>
+          {[...bundle.screens].sort((a, b) => a.orderIndex - b.orderIndex).map(s => (
+            <button
+              key={s.id}
+              onClick={e => { e.stopPropagation(); navigate(s.id); }}
+              className="flex-shrink-0 flex flex-col items-center gap-1 focus:outline-none group"
+              title={s.name}
+            >
+              <div
+                className="w-16 h-10 rounded overflow-hidden border transition-all"
+                style={{
+                  borderColor: s.id === currentScreenId ? '#F7F859' : 'transparent',
+                  boxShadow: s.id === currentScreenId ? '0 0 0 1px #F7F859' : 'none',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.imageUrl} alt={s.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" draggable={false} />
+              </div>
+              <span className="text-[10px] text-gray-400 group-hover:text-gray-200 truncate max-w-[64px] transition-colors"
+                style={{ color: s.id === currentScreenId ? '#F7F859' : undefined }}>
+                {s.name}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 

@@ -767,9 +767,24 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
                   return (
                     <div
                       key={spot.id}
-                      className={`absolute border-2 transition-colors
-                        ${isSelected ? 'border-blue-500 bg-blue-500/10' : spot.action === 'tooltip' ? 'border-blue-400/70 bg-blue-400/10 hover:bg-blue-400/20' : 'border-yellow-400/70 bg-yellow-400/10 hover:bg-yellow-400/20'}`}
-                      style={{ ...css, zIndex: isSelected ? 20 : 10, pointerEvents: mode === 'pointer' ? 'auto' : 'none', cursor: mode === 'pointer' ? 'move' : undefined, borderRadius: `${spot.radius_tl ?? 0}px ${spot.radius_tr ?? 0}px ${spot.radius_br ?? 0}px ${spot.radius_bl ?? 0}px` }}
+                      className="absolute transition-colors"
+                      style={{
+                        ...css,
+                        zIndex: isSelected ? 20 : 10,
+                        pointerEvents: mode === 'pointer' ? 'auto' : 'none',
+                        cursor: mode === 'pointer' ? 'move' : undefined,
+                        borderRadius: `${spot.radius_tl ?? 0}px ${spot.radius_tr ?? 0}px ${spot.radius_br ?? 0}px ${spot.radius_bl ?? 0}px`,
+                        border: isSelected
+                          ? '0.5px dashed #3b82f6'
+                          : spot.action === 'tooltip'
+                          ? '0.5px dashed rgba(96,165,250,0.7)'
+                          : '0.5px dashed rgba(250,204,21,0.8)',
+                        backgroundColor: isSelected
+                          ? 'rgba(59,130,246,0.08)'
+                          : spot.action === 'tooltip'
+                          ? 'rgba(96,165,250,0.08)'
+                          : 'rgba(250,204,21,0.08)',
+                      }}
                       onMouseDown={e => {
                         if (mode !== 'pointer') return;
                         e.stopPropagation();
