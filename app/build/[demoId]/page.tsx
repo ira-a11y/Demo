@@ -731,7 +731,9 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
               className="w-full py-1.5 border border-dashed rounded text-sm text-gray-500 hover:text-gray-800 focus:outline-none transition-colors"
               style={{ borderColor: '#B6D4D6' }}
             >
-              + Upload
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/upload.svg" alt="" width={14} height={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle', opacity: 0.6 }} />
+              Import
             </button>
             <input ref={fileInputRef} type="file" multiple accept="image/png,image/jpeg,image/webp" className="hidden"
               onChange={e => { if (e.target.files) handleFiles(e.target.files); e.target.value = ''; }} />
