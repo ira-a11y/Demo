@@ -95,7 +95,8 @@ export default function Dashboard() {
     <main className="min-h-screen p-8" style={{ background: '#EEEEEE' }}>
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-semibold text-gray-900">ClickDemo</h1>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="Reeviu" height={32} style={{ display: 'block' }} />
           <button
             onClick={createDemo}
             disabled={creating}

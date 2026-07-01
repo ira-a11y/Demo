@@ -9,7 +9,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "ClickDemo",
+  title: "Reeviu",
   description: "Build and share interactive product demos",
 };
 

@@ -28,6 +28,8 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
   const [notFound, setNotFound] = useState(false);
 
   const [activeScreenId, setActiveScreenId] = useState<string | null>(null);
+  const [canvasScreenId, setCanvasScreenId] = useState<string | null>(null);
+  const [canvasLoading, setCanvasLoading] = useState(false);
   const [mode, setMode] = useState<Mode>('pointer');
   const [selectedHotspotIds, setSelectedHotspotIds] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
@@ -38,10 +40,46 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
   const [titleEdit, setTitleEdit] = useState('');
   const [editingTitle, setEditingTitle] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
-  const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
-  function zoomIn() { setZoom(z => ZOOM_STEPS[Math.min(ZOOM_STEPS.indexOf(z) + 1, ZOOM_STEPS.length - 1)] ?? z); }
-  function zoomOut() { setZoom(z => ZOOM_STEPS[Math.max(ZOOM_STEPS.indexOf(z) - 1, 0)] ?? z); }
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 5;
+  const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
+  function clampZoom(z: number) { return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z)); }
+  function zoomIn() { setZoom(z => { const next = ZOOM_STEPS.find(s => s > z) ?? MAX_ZOOM; return clampZoom(next); }); }
+  function zoomOut() { setZoom(z => { const next = [...ZOOM_STEPS].reverse().find(s => s < z) ?? MIN_ZOOM; return clampZoom(next); }); }
+
+  // Attach non-passive wheel listener so preventDefault() actually works
+  useEffect(() => {
+    const el = canvasContainerRef.current;
+    if (!el) return;
+    function onWheel(e: WheelEvent) {
+      e.preventDefault();
+      const rect = el!.getBoundingClientRect();
+      const cursorX = e.clientX - rect.left;
+      const cursorY = e.clientY - rect.top;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      if (e.ctrlKey || e.metaKey) {
+        const speed = e.deltaMode === 1 ? 0.08 : 0.012;
+        const delta = -e.deltaY * speed;
+        setZoom(prevZ => {
+          const nextZ = clampZoom(prevZ * (1 + delta));
+          const ratio = nextZ / prevZ;
+          setPan(p => ({
+            x: (cursorX - cx) * (1 - ratio) + p.x * ratio,
+            y: (cursorY - cy) * (1 - ratio) + p.y * ratio,
+          }));
+          return nextZ;
+        });
+      } else {
+        setPan(p => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   // Draw state
   const [drawing, setDrawing] = useState(false);
@@ -63,9 +101,23 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const activeScreen = screens.find(s => s.id === activeScreenId) ?? null;
+  const canvasScreen = screens.find(s => s.id === canvasScreenId) ?? activeScreen;
   const activeHotspots = activeScreenId ? (hotspots[activeScreenId] ?? []) : [];
+  const canvasHotspots = canvasScreenId ? (hotspots[canvasScreenId] ?? []) : activeHotspots;
   const selectedHotspots = activeHotspots.filter(h => selectedHotspotIds.includes(h.id));
   const selectedHotspot = selectedHotspots.length === 1 ? selectedHotspots[0] : null;
+
+  // Preload new image before swapping canvas
+  useEffect(() => {
+    if (!activeScreenId) return;
+    if (activeScreenId === canvasScreenId) return;
+    setCanvasLoading(true);
+    const img = new Image();
+    img.src = getPublicUrl(screens.find(s => s.id === activeScreenId)?.image_path ?? '');
+    img.onload = () => { setCanvasScreenId(activeScreenId); setCanvasLoading(false); };
+    img.onerror = () => { setCanvasScreenId(activeScreenId); setCanvasLoading(false); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScreenId]);
 
   // Load demo + screens + hotspots
   useEffect(() => {
@@ -85,7 +137,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
         if (sr.ok) {
           const ss: Screen[] = await sr.json();
           setScreens(ss);
-          if (ss.length > 0) setActiveScreenId(ss[0].id);
+          if (ss.length > 0) { setActiveScreenId(ss[0].id); setCanvasScreenId(ss[0].id); }
 
           // Load hotspots for all screens
           const hs = await Promise.all(ss.map(s => fetch(`/api/screens/${s.id}/hotspots`).then(r => r.json())));
@@ -604,8 +656,9 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#EEEEEE' }}>
       {/* Toolbar */}
       <header className="border-b px-4 py-2 flex items-center gap-4 shrink-0" style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}>
-        <button onClick={() => router.push('/')} className="text-gray-500 hover:text-gray-800 text-sm focus:outline-none rounded" aria-label="Back to dashboard">
-          ← Dashboard
+        <button onClick={() => router.push('/')} className="text-gray-500 focus:outline-none rounded flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 transition-colors" aria-label="Back to dashboard">
+          <img src="/logo.svg" alt="Reeviu" height={22} style={{ display: 'block' }} />
+          <img src="/back.svg" alt="" width={14} height={14} style={{ opacity: 0.4 }} />
         </button>
         {editingTitle ? (
           <input
@@ -624,48 +677,49 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
         <div className="flex-1" />
         {/* Mode toggle */}
         <div className="flex rounded-lg p-0.5 gap-0.5" style={{ background: '#E4E4E4' }}>
-          <button
-            onClick={() => setMode('pointer')}
-            title="Pointer — select & move hotspots"
-            className={`px-3 py-1.5 rounded transition-colors focus:outline-none
-              ${mode === 'pointer' ? 'shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
-            style={mode === 'pointer' ? { background: '#FAFAFA' } : {}}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 1L13 8.5L8.2 9.6L6 14L3 1Z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button
-            onClick={() => setMode('add')}
-            title="Add hotspot — draw a new region"
-            className={`px-3 py-1.5 rounded transition-colors focus:outline-none
-              ${mode === 'add' ? 'shadow text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}
-            style={mode === 'add' ? { background: '#FAFAFA' } : {}}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5"/>
-              <circle cx="8" cy="8" r="1" fill="currentColor"/>
-              <line x1="8" y1="1" x2="8" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="8" y1="13" x2="8" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="1" y1="8" x2="3" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="13" y1="8" x2="15" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-          </button>
+          <div className="relative group/pointer">
+            <button
+              onClick={() => setMode('pointer')}
+              className={`px-3 py-1.5 rounded transition-colors focus:outline-none
+                ${mode === 'pointer' ? 'shadow text-gray-900' : 'text-gray-500 hover:bg-white/60'}`}
+              style={mode === 'pointer' ? { background: '#FAFAFA' } : {}}
+            >
+              <img src="/pointer.svg" alt="Pointer" width={26} height={26} />
+            </button>
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 rounded text-xs text-white whitespace-nowrap pointer-events-none opacity-0 group-hover/pointer:opacity-100 transition-opacity z-50" style={{ background: 'rgba(30,30,30,0.85)' }}>
+              Pointer
+            </div>
+          </div>
+          <div className="relative group/hotspot">
+            <button
+              onClick={() => setMode('add')}
+              className={`px-3 py-1.5 rounded transition-colors focus:outline-none
+                ${mode === 'add' ? 'shadow text-gray-900' : 'text-gray-500 hover:bg-white/60'}`}
+              style={mode === 'add' ? { background: '#FAFAFA' } : {}}
+            >
+              <img src="/select.svg" alt="Add hotspot" width={26} height={26} />
+            </button>
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 rounded text-xs text-white whitespace-nowrap pointer-events-none opacity-0 group-hover/hotspot:opacity-100 transition-opacity z-50" style={{ background: 'rgba(30,30,30,0.85)' }}>
+              Add hotspot
+            </div>
+          </div>
         </div>
         <div className="flex-1" />
         {/* Zoom controls */}
         <div className="flex items-center gap-1 rounded-lg px-1 border" style={{ borderColor: '#D8D8D8' }}>
-          <button onClick={zoomOut} disabled={zoom <= ZOOM_STEPS[0]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom out">−</button>
-          <span className="text-xs text-gray-600 w-10 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
-          <button onClick={zoomIn} disabled={zoom >= ZOOM_STEPS[ZOOM_STEPS.length - 1]} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom in">+</button>
+          <button onClick={zoomOut} disabled={zoom <= MIN_ZOOM} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom out">−</button>
+          <button onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }} className="text-xs text-gray-600 w-10 text-center tabular-nums focus:outline-none hover:text-gray-900" title="Reset zoom">{Math.round(zoom * 100)}%</button>
+          <button onClick={zoomIn} disabled={zoom >= MAX_ZOOM} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 disabled:opacity-30 rounded focus:outline-none" aria-label="Zoom in">+</button>
         </div>
 
         <div className="w-px h-5" style={{ background: '#D8D8D8' }} />
         <span className={`text-xs ${saveStatus === 'error' ? 'text-red-500' : 'text-gray-400'}`}>
           {saveStatus === 'saved' ? 'All changes saved' : saveStatus === 'saving' ? 'Saving…' : 'Couldn\'t save — retry'}
         </span>
-        <button onClick={() => setShowShare(true)} className="px-3 py-1.5 rounded text-sm font-medium text-gray-900 focus:outline-none" style={{ background: '#F7F859' }}>Share</button>
+        <button onClick={() => setShowShare(true)} className="px-3 py-1.5 rounded text-sm font-medium text-gray-900 focus:outline-none flex items-center gap-2 hover:opacity-85 active:opacity-70 transition-opacity" style={{ background: '#F7F859' }}>
+          <img src="/share.svg" alt="" width={18} height={18} />
+          Share
+        </button>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
@@ -737,15 +791,28 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
         </aside>
 
         {/* Canvas */}
-        <main className="flex-1 overflow-auto">
+        <main
+          ref={canvasContainerRef}
+          className="flex-1 overflow-hidden relative"
+          style={{ touchAction: 'none' }}
+        >
           {!activeScreen ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-gray-400">
               <p>Upload a screenshot to start building your demo.</p>
               <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 rounded text-gray-900 font-medium" style={{ background: '#F7F859' }}>Upload image</button>
             </div>
           ) : (
-            <div className="p-6">
-            <div style={{ width: `${Math.round(zoom * 100)}%`, minWidth: 200, margin: '0 auto', transition: 'width 0.15s' }}>
+            <div style={{
+              position: 'absolute',
+              transform: `translate(calc(-50% + ${pan.x}px), calc(-50% + ${pan.y}px)) scale(${zoom})`,
+              transformOrigin: '50% 50%',
+              top: '50%',
+              left: '50%',
+              width: '80%',
+              minWidth: 320,
+              transition: 'none',
+            }}>
+            <div>
               {activeHotspots.length === 0 && (
                 <p className="text-xs text-center text-gray-400 mb-2">Switch to Add hotspot and drag on the image to create a click region</p>
               )}
@@ -758,12 +825,35 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
                 onMouseUp={onWrapperMouseUp}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={getPublicUrl(activeScreen.image_path)} alt={activeScreen.name} className="block w-full h-auto" draggable={false} />
+                <img src={canvasScreen ? getPublicUrl(canvasScreen.image_path) : ''} alt={canvasScreen?.name ?? ''} className="block w-full h-auto" draggable={false} />
+
+                {/* Loading overlay while new image preloads */}
+                {canvasLoading && (
+                  <div className="absolute inset-0 rounded" style={{ background: 'rgba(238,238,238,0.7)', backdropFilter: 'blur(2px)', zIndex: 50 }} />
+                )}
 
                 {/* Hotspot overlays */}
-                {activeHotspots.map(spot => {
+                {canvasHotspots.map(spot => {
                   const css = rectToCss(spot);
                   const isSelected = selectedHotspotIds.includes(spot.id);
+                  function duplicateSpot(e: React.MouseEvent) {
+                    e.stopPropagation();
+                    if (!activeScreenId) return;
+                    pushUndo();
+                    fetch(`/api/screens/${activeScreenId}/hotspots`, {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        x: spot.x + 0.02, y: spot.y + 0.02, w: spot.w, h: spot.h,
+                        action: spot.action, target_screen: spot.target_screen,
+                        tooltip_text: spot.tooltip_text,
+                        radius_tl: spot.radius_tl ?? 0, radius_tr: spot.radius_tr ?? 0,
+                        radius_br: spot.radius_br ?? 0, radius_bl: spot.radius_bl ?? 0,
+                      }),
+                    }).then(r => r.json()).then((created: Hotspot) => {
+                      setHotspots(prev => ({ ...prev, [activeScreenId]: [...(prev[activeScreenId] ?? []), created] }));
+                      setSelectedHotspotIds([created.id]);
+                    });
+                  }
                   return (
                     <div
                       key={spot.id}
@@ -773,7 +863,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
                         zIndex: isSelected ? 20 : 10,
                         pointerEvents: mode === 'pointer' ? 'auto' : 'none',
                         cursor: mode === 'pointer' ? 'move' : undefined,
-                        borderRadius: `${spot.radius_tl ?? 0}px ${spot.radius_tr ?? 0}px ${spot.radius_br ?? 0}px ${spot.radius_bl ?? 0}px`,
+                        borderRadius: `${(spot.radius_tl ?? 0) / zoom}px ${(spot.radius_tr ?? 0) / zoom}px ${(spot.radius_br ?? 0) / zoom}px ${(spot.radius_bl ?? 0) / zoom}px`,
                         border: isSelected
                           ? '0.5px dashed #3b82f6'
                           : spot.action === 'tooltip'
@@ -801,16 +891,49 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
                       }}
                       onClick={e => { if (mode === 'pointer' && !e.shiftKey) { e.stopPropagation(); } }}
                     >
+                      {/* Floating action toolbar */}
+                      {isSelected && selectedHotspotIds.length === 1 && (
+                        <div
+                          className="absolute left-1/2 flex items-center gap-1 rounded-lg shadow-md px-1.5 py-1 pointer-events-auto"
+                          style={{
+                            bottom: `calc(100% + ${12 / zoom}px)`,
+                            transform: `translateX(-50%) scale(${1 / zoom})`,
+                            transformOrigin: 'bottom center',
+                            background: '#EEEEEE',
+                            zIndex: 100,
+                            whiteSpace: 'nowrap',
+                          }}
+                          onMouseDown={e => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={duplicateSpot}
+                            title="Duplicate"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-black/10 focus:outline-none transition-colors"
+                          >
+                            <img src="/duplicate.svg" alt="Duplicate" width={15} height={15} />
+                          </button>
+                          <div style={{ width: 1, height: 16, background: 'rgba(0,0,0,0.15)' }} />
+                          <button
+                            onClick={e => { e.stopPropagation(); deleteHotspot(spot.id); }}
+                            title="Delete"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-400/20 focus:outline-none transition-colors"
+                          >
+                            <img src="/traash.svg" alt="Delete" width={15} height={15} />
+                          </button>
+                        </div>
+                      )}
+
                       {/* Corner resize handles */}
                       {isSelected && (['tl','tr','bl','br'] as Corner[]).map(corner => (
                         <div
                           key={corner}
-                          className="absolute w-3 h-3 bg-blue-500 border border-white rounded-sm"
+                          className="absolute bg-blue-500 border border-white rounded-sm"
                           style={{
-                            top: corner.startsWith('t') ? -6 : undefined,
-                            bottom: corner.startsWith('b') ? -6 : undefined,
-                            left: corner.endsWith('l') ? -6 : undefined,
-                            right: corner.endsWith('r') ? -6 : undefined,
+                            width: 6, height: 6,
+                            top: corner.startsWith('t') ? -3 : undefined,
+                            bottom: corner.startsWith('b') ? -3 : undefined,
+                            left: corner.endsWith('l') ? -3 : undefined,
+                            right: corner.endsWith('r') ? -3 : undefined,
                             cursor: `${corner}-resize`,
                           }}
                           onMouseDown={e => {
@@ -855,6 +978,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
           )}
         </main>
 
+
         {/* Right drawer — always present */}
         {drawerOpen ? (
           <HotspotDrawer
@@ -875,10 +999,9 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
             onClick={() => setDrawerOpen(true)}
             title="Open inspector"
             className="absolute right-0 top-1/2 -translate-y-1/2 border border-r-0 rounded-l-lg px-1.5 py-3 shadow text-gray-400 hover:text-gray-700 focus:outline-none z-10"
-            style={{ background: '#FAFAFA', borderColor: '#D8D8D8' }}
-            style={{ writingMode: 'vertical-rl' }}
+            style={{ background: '#FAFAFA', borderColor: '#D8D8D8', writingMode: 'vertical-rl' }}
           >
-            Inspector
+            <img src="/inspector.svg" alt="Inspector" width={16} height={16} style={{ opacity: 0.5, transform: 'rotate(90deg)' }} />
           </button>
         )}
       </div>
@@ -923,8 +1046,30 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
       }}
     >
       {isFirst && <span className="text-[10px] font-semibold uppercase tracking-wide px-0.5" style={{ color: '#6aabae' }}>Start</span>}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imgUrl} alt={screen.name} className="w-full h-20 object-cover rounded" loading="lazy" />
+      {/* Thumbnail with hover overlay buttons */}
+      <div className="relative group/thumb">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imgUrl} alt={screen.name} className="w-full h-20 object-cover rounded" loading="lazy" />
+        <div className="absolute inset-0 rounded flex items-center justify-center gap-3 opacity-0 group-hover/thumb:opacity-100 transition-opacity"
+          style={{ background: 'rgba(0,0,0,0.45)' }}>
+          <button
+            onClick={e => { e.stopPropagation(); onReplace(); }}
+            className="flex flex-col items-center gap-1 focus:outline-none group/btn"
+            aria-label="Replace image"
+            title="Replace image"
+          >
+            <img src="/replace.svg" alt="" width={22} height={22} className="group-hover/btn:scale-110 transition-transform" style={{ filter: 'invert(1)', opacity: 0.9 }} />
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            className="flex flex-col items-center gap-1 focus:outline-none group/btn"
+            aria-label="Delete screen"
+            title="Delete screen"
+          >
+            <img src="/traash.svg" alt="" width={22} height={22} className="group-hover/btn:scale-110 transition-transform" style={{ filter: 'invert(1)', opacity: 0.9 }} />
+          </button>
+        </div>
+      </div>
       {editing ? (
         <input
           autoFocus
@@ -936,26 +1081,13 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
             if (e.key === 'Escape') { setVal(screen.name); setEditing(false); }
           }}
           onClick={e => e.stopPropagation()}
-          className="w-full text-xs text-gray-900 outline-none mt-3 bg-transparent border-b"
+          className="w-full text-xs text-gray-900 outline-none mt-2 bg-transparent border-b"
           style={{ borderColor: '#B6D4D6' }}
           maxLength={80}
         />
       ) : (
-        <p className="text-xs text-gray-700 truncate mt-3 px-0.5" onDoubleClick={e => { e.stopPropagation(); setEditing(true); }}>{screen.name}</p>
+        <p className="text-xs text-gray-700 truncate mt-2 px-0.5" onDoubleClick={e => { e.stopPropagation(); setEditing(true); }}>{screen.name}</p>
       )}
-      <div className="flex gap-2 mt-1">
-        <button
-          onClick={e => { e.stopPropagation(); onReplace(); }}
-          className="text-[10px] focus:outline-none hover:opacity-70"
-          style={{ color: '#5fa0a3' }}
-          aria-label="Replace image"
-        >Replace</button>
-        <button
-          onClick={e => { e.stopPropagation(); onDelete(); }}
-          className="text-[10px] text-red-400 hover:text-red-600 focus:outline-none"
-          aria-label="Delete screen"
-        >Delete</button>
-      </div>
     </li>
   );
 }
@@ -964,12 +1096,23 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
 function DestinationPicker({ screens, activeScreenId, value, onChange }: {
   screens: Screen[]; activeScreenId: string; value: string | null; onChange: (id: string) => void;
 }) {
-  const [previewScreen, setPreviewScreen] = useState<Screen | null>(null);
+  const [lightboxScreen, setLightboxScreen] = useState<Screen | null>(null);
 
   return (
     <div>
       <label className="text-xs text-gray-500 font-medium mb-1.5 block">Destination screen</label>
       <div className="flex flex-col gap-1">
+        {/* None option */}
+        <div
+          className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 transition-colors cursor-pointer
+            ${!value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+          onClick={() => onChange('')}
+        >
+          <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${!value ? 'border-blue-500' : 'border-gray-300'}`}>
+            {!value && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 block" />}
+          </span>
+          <span className="flex-1 text-xs text-gray-500 italic">None</span>
+        </div>
         {screens.map(s => {
           const isCurrent = s.id === activeScreenId;
           const isSelected = s.id === value;
@@ -987,10 +1130,10 @@ function DestinationPicker({ screens, activeScreenId, value, onChange }: {
               <span className="flex-1 text-xs text-gray-800 truncate">{s.name}{isCurrent ? ' (current)' : ''}</span>
               {!isCurrent && (
                 <button
-                  onClick={e => { e.stopPropagation(); setPreviewScreen(prev => prev?.id === s.id ? null : s); }}
+                  onClick={e => { e.stopPropagation(); setLightboxScreen(s); }}
                   className="text-[10px] text-gray-400 hover:text-blue-500 underline focus:outline-none flex-shrink-0"
                 >
-                  {previewScreen?.id === s.id ? 'Hide' : 'Preview'}
+                  Preview
                 </button>
               )}
             </div>
@@ -999,15 +1142,24 @@ function DestinationPicker({ screens, activeScreenId, value, onChange }: {
       </div>
       {!value && <p className="text-xs text-yellow-600 mt-1">No destination set — hotspot will be inert</p>}
 
-      {/* Preview popup */}
-      {previewScreen && (
-        <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 relative">
-          <div className="flex items-center justify-between px-2 py-1 bg-gray-100 border-b border-gray-200">
-            <span className="text-[10px] text-gray-500 font-medium truncate">{previewScreen.name}</span>
-            <button onClick={() => setPreviewScreen(null)} className="text-gray-400 hover:text-gray-600 text-sm leading-none focus:outline-none">×</button>
-          </div>
+      {/* Full-size lightbox */}
+      {lightboxScreen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70"
+          onClick={() => setLightboxScreen(null)}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={getPublicUrl(previewScreen.image_path)} alt={previewScreen.name} className="w-full h-auto max-h-48 object-contain" />
+          <img
+            src={getPublicUrl(lightboxScreen.image_path)}
+            alt={lightboxScreen.name}
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxScreen(null)}
+            className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full text-white text-xl focus:outline-none"
+            style={{ background: 'rgba(0,0,0,0.5)' }}
+          >×</button>
         </div>
       )}
     </div>
@@ -1071,7 +1223,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
 
       {selectedHotspots.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6 gap-2">
-          <div className="text-2xl">↖</div>
+          <img src="/inspector.svg" alt="" width={48} height={48} style={{ opacity: 0.25 }} />
           <p className="text-xs text-gray-400">Select a hotspot to edit it. Shift+click to multi-select.</p>
         </div>
       ) : selectedHotspots.length > 1 ? (
@@ -1083,7 +1235,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           <div>
             <label className="text-xs text-gray-500 font-medium mb-1.5 block">Action on click</label>
             <div className="flex rounded-lg p-0.5 gap-0.5" style={{ background: '#E8E8E8' }}>
-              {([['navigate','Go to screen'],['tooltip','Tooltip'],['layover','Layover']] as const).map(([a, label]) => (
+              {([['navigate','Destination'],['tooltip','Tooltip'],['layover','Layover']] as const).map(([a, label]) => (
                 <button
                   key={a}
                   onClick={() => onPatch({ action: a })}
@@ -1212,22 +1364,7 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
                 title={radiusLinked ? 'Unlock corners' : 'Lock all corners'}
                 className={`w-7 h-7 flex items-center justify-center rounded transition-colors focus:outline-none focus:ring-1 focus:ring-blue-400 ${radiusLinked ? 'text-blue-500 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
               >
-                {radiusLinked ? (
-                  /* Linked: two chain links connected */
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6.5 9.5L4.5 11.5a2.5 2.5 0 0 1-3.5-3.5l2-2a2.5 2.5 0 0 1 3.3-.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    <path d="M9.5 6.5l2-2a2.5 2.5 0 0 1 3.5 3.5l-2 2a2.5 2.5 0 0 1-3.3.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    <line x1="6" y1="10" x2="10" y2="6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  </svg>
-                ) : (
-                  /* Unlinked: broken chain */
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6.5 9.5L4.5 11.5a2.5 2.5 0 0 1-3.5-3.5l2-2a2.5 2.5 0 0 1 3.3-.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    <path d="M9.5 6.5l2-2a2.5 2.5 0 0 1 3.5 3.5l-2 2a2.5 2.5 0 0 1-3.3.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    <line x1="6" y1="6" x2="6" y2="4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                    <line x1="10" y1="12" x2="10" y2="10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-                  </svg>
-                )}
+                <img src="/link.svg" alt="Link corners" width={16} height={16} style={{ opacity: radiusLinked ? 1 : 0.4 }} />
               </button>
             </div>
 
@@ -1248,9 +1385,9 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
-                {([['tl','↖'],['tr','↗'],['bl','↙'],['br','↘']] as [keyof typeof corners, string][]).map(([key, icon]) => (
+                {([['tl','corner_top_left'],['tr','corner_top_right'],['bl','corner_button_left'],['br','corner_button_right']] as [keyof typeof corners, string][]).map(([key, icon]) => (
                   <div key={key} className="flex items-center gap-1 rounded-lg px-2 py-1.5 border" style={{ borderColor: '#D8D8D8', background: '#F5F5F5' }}>
-                    <span className="text-xs text-gray-400 select-none">{icon}</span>
+                    <img src={`/${icon}.svg`} alt={key} width={14} height={14} style={{ opacity: 0.5, flexShrink: 0 }} />
                     <input
                       type="number" min={0} max={999} step={1}
                       value={corners[key]}
@@ -1271,8 +1408,9 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
           <div className="mt-auto pt-2 border-t" style={{ borderColor: '#EEEEEE' }}>
             <button
               onClick={onDelete}
-              className="text-sm text-red-400 hover:text-red-600 focus:outline-none rounded"
+              className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 focus:outline-none rounded"
             >
+              <img src="/traash.svg" alt="" width={14} height={14} style={{ opacity: 0.7 }} />
               Delete hotspot
             </button>
           </div>
