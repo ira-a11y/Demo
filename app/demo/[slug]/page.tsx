@@ -105,8 +105,14 @@ export default function ViewerPage({ params }: { params: Promise<{ slug: string 
       {/* Floating tooltip */}
       {tooltip && (
         <div
-          className="fixed z-50 bg-gray-800 text-white text-sm px-3 py-2 rounded shadow-lg max-w-xs pointer-events-none"
-          style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
+          className="fixed z-50 bg-gray-800 text-white text-sm px-3 py-2 rounded shadow-lg pointer-events-none whitespace-pre-wrap break-words"
+          style={{
+            maxWidth: 240,
+            top: tooltip.y + 12,
+            ...(tooltip.x + 260 > window.innerWidth
+              ? { right: window.innerWidth - tooltip.x + 8, left: 'auto' }
+              : { left: tooltip.x + 12 }),
+          }}
           onClick={e => e.stopPropagation()}
         >
           {tooltip.text}

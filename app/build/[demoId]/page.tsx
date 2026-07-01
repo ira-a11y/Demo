@@ -766,7 +766,7 @@ export default function BuilderPage({ params }: { params: Promise<{ demoId: stri
                     <div
                       key={spot.id}
                       className={`absolute border-2 transition-colors
-                        ${isSelected ? 'border-blue-500 bg-blue-500/10' : 'border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/20'}`}
+                        ${isSelected ? 'border-blue-500 bg-blue-500/10' : spot.action === 'tooltip' ? 'border-blue-400/70 bg-blue-400/10 hover:bg-blue-400/20' : 'border-yellow-400/70 bg-yellow-400/10 hover:bg-yellow-400/20'}`}
                       style={{ ...css, zIndex: isSelected ? 20 : 10, pointerEvents: mode === 'pointer' ? 'auto' : 'none', cursor: mode === 'pointer' ? 'move' : undefined, borderRadius: `${spot.radius_tl ?? 0}px ${spot.radius_tr ?? 0}px ${spot.radius_br ?? 0}px ${spot.radius_bl ?? 0}px` }}
                       onMouseDown={e => {
                         if (mode !== 'pointer') return;
@@ -936,6 +936,59 @@ function RailTile({ screen, isFirst, isActive, onSelect, onRename, onDelete, onR
 }
 
 // --- Hotspot drawer ---
+function DestinationPicker({ screens, activeScreenId, value, onChange }: {
+  screens: Screen[]; activeScreenId: string; value: string | null; onChange: (id: string) => void;
+}) {
+  const [previewScreen, setPreviewScreen] = useState<Screen | null>(null);
+
+  return (
+    <div>
+      <label className="text-xs text-gray-500 font-medium mb-1.5 block">Destination screen</label>
+      <div className="flex flex-col gap-1">
+        {screens.map(s => {
+          const isCurrent = s.id === activeScreenId;
+          const isSelected = s.id === value;
+          return (
+            <div
+              key={s.id}
+              className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 transition-colors cursor-pointer
+                ${isCurrent ? 'opacity-40 cursor-not-allowed border-gray-100 bg-gray-50' : isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
+              onClick={() => { if (!isCurrent) onChange(s.id); }}
+            >
+              <span className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 flex items-center justify-center
+                ${isSelected ? 'border-blue-500' : 'border-gray-300'}`}>
+                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 block" />}
+              </span>
+              <span className="flex-1 text-xs text-gray-800 truncate">{s.name}{isCurrent ? ' (current)' : ''}</span>
+              {!isCurrent && (
+                <button
+                  onClick={e => { e.stopPropagation(); setPreviewScreen(prev => prev?.id === s.id ? null : s); }}
+                  className="text-[10px] text-gray-400 hover:text-blue-500 underline focus:outline-none flex-shrink-0"
+                >
+                  {previewScreen?.id === s.id ? 'Hide' : 'Preview'}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {!value && <p className="text-xs text-yellow-600 mt-1">No destination set — hotspot will be inert</p>}
+
+      {/* Preview popup */}
+      {previewScreen && (
+        <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 relative">
+          <div className="flex items-center justify-between px-2 py-1 bg-gray-100 border-b border-gray-200">
+            <span className="text-[10px] text-gray-500 font-medium truncate">{previewScreen.name}</span>
+            <button onClick={() => setPreviewScreen(null)} className="text-gray-400 hover:text-gray-600 text-sm leading-none focus:outline-none">×</button>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={getPublicUrl(previewScreen.image_path)} alt={previewScreen.name} className="w-full h-auto max-h-48 object-contain" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, demoId, onPatch, onPatchMany, onDelete, onDeleteMany, onClose }:
   { hotspot: Hotspot | null; selectedHotspots: Hotspot[]; screens: Screen[]; activeScreenId: string; demoId: string; onPatch: (p: Partial<Hotspot>) => void; onPatchMany: (p: Partial<Hotspot>) => void; onDelete: () => void; onDeleteMany: () => void; onClose: () => void }
 ) {
@@ -1020,24 +1073,12 @@ function HotspotDrawer({ hotspot, selectedHotspots, screens, activeScreenId, dem
 
           {/* Destination (navigate only) */}
           {hotspot.action === 'navigate' && (
-            <div>
-              <label className="text-xs text-gray-500 font-medium mb-1.5 block">Destination screen</label>
-              <select
-                value={hotspot.target_screen ?? ''}
-                onChange={e => onPatch({ target_screen: e.target.value || null })}
-                className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-              >
-                <option value="">— No destination —</option>
-                {screens.map(s => (
-                  <option key={s.id} value={s.id} disabled={s.id === activeScreenId}>
-                    {s.name}{s.id === activeScreenId ? ' (current)' : ''}
-                  </option>
-                ))}
-              </select>
-              {!hotspot.target_screen && (
-                <p className="text-xs text-yellow-600 mt-1">No destination set — hotspot will be inert</p>
-              )}
-            </div>
+            <DestinationPicker
+              screens={screens}
+              activeScreenId={activeScreenId}
+              value={hotspot.target_screen}
+              onChange={id => onPatch({ target_screen: id || null })}
+            />
           )}
 
           {/* Layover image (layover only) */}
